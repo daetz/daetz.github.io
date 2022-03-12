@@ -63,6 +63,10 @@ function repaint(){
         ctx.fillStyle = '#423126'; //nice brown
         ctx.fillText(letters[i],letterX[i],letterY[i]);
     }
+    
+    for(let i=0; i<punctX.length; i++){
+        ctx.fillText(punctuation[i],punctX[i],punctY[i]);
+    }
 }
 
 function clear(){
@@ -132,8 +136,8 @@ function createCharacterCoordinates(){
 				letterX.push(c.width/2+kerning*(2*j+1-lines[i].length)/2);
 				letterY.push(c.height/2+linespace*(2*i+1-lines.length)/2);
 			}else if(lines[i].charAt(j)!=' '){
-				punctX.push(c.height/2+linespace*(2*i+1-lines.length)/2);
-				punctY.push(100+kerning*i);
+				punctX.push(c.width/2+kerning*(2*j+1-lines[i].length)/2);
+				punctY.push(c.height/2+linespace*(2*i+1-lines.length)/2);
 			}
 		}
 	}
