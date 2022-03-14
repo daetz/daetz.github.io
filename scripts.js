@@ -22,19 +22,13 @@ const c = document.getElementById("myCanvas");
 const ctx = c.getContext("2d");
 
 var sourceText;
-const quotes = [];
-getQuotes();
-var message = quotes[Math.floor(quotes.length*Math.random())];
+const quotes = getQuotes();
+var message = quotes[Math.floor(quotes.length*Math.random())].toUpperCase();
 const keyLength = 8;
 const wrapLength = 21; //incomprehensibilities is the longest common english word
 var key;
-message = message.toUpperCase();
-getQuotes();
 
-const lines = [];
-const initLetters = [];
-var letters = [];
-const punctuation = [];
+var lines = [], initLetters = [], letters = [], punctuation = [];
 const letterX = [], letterY = [], punctX = [], punctY = [];
 const hexColors = ["#b2a69e","#c7a379","#bebefa","#c6c97b","#dec8af","#a7b39b","#a69eb2","#eba893"];
 var letterClicked = -1;
@@ -42,57 +36,95 @@ var letterClicked = -1;
 key=createRandomKey(keyLength);
 createLetters();
 encrypt(key);
-wrapLines(message,wrapLength);
+lines = wrapLines(message,wrapLength);
 createCharacterCoordinates();
+const messageData = getMessageData();
 repaint();
 
+function getMessageData(){
+	let messageData = [];
+    //total letters
+    messageData.push(letters.length);
+    let regexpWord = /\b[A-Z']+\b/g;
+    let words = message.match(regexpWord);
+    //total words
+    messageData.push(words.length);
+    //average word length
+    messageData.push(letters.length/words.length);
+    //first word length
+    messageData.push(words[0].length);
+	
+	let oneLetterWords = 0, twoLetterWords = 0;
+	for(let i=0; i<words.length; i++){
+		let wordLength = words[i].match(/[A-Z]/g).length; //this way contractions are still counted (e.x I'm has 2 letters)
+		if(wordLength == 1)
+			oneLetterWords ++;
+		else if(wordLength == 2)
+			twoLetterWords ++;
+	}
+    //one-letter words
+    messageData.push(oneLetterWords);
+    //two-letter words
+    messageData.push(twoLetterWords);
+    //contractions -- ternary operator prevents error if no matches found
+    messageData.push(message.match(/\w'\w/g) == null ? 0 : message.match(/\w'\w/g).length);
+
+    console.table(messageData);
+	return messageData;
+}
 
 function repaint(){
     let size = 20;
     clear();
     for(let i=0; i<letterX.length; i++){
-        //ctx.fillStyle = `rgb(${letterX[i]%255},${letterY[i]%255},255)`;
+
+		//Draws tiles
         ctx.fillStyle = hexColors[i%keyLength];
         ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).fill();
-        ctx.strokeStyle = '#423126';
-        if(letterClicked==i)
-            ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).stroke();
+       
+		//Draws letters
         ctx.font = `${fontSize}px monospace`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = '#423126'; //nice brown
+        ctx.textAlign = "center"; //these two lines mean that the same tile coordinates can be used...
+        ctx.textBaseline = "middle"; //...because the letters will be centered at (x,y)
+        ctx.fillStyle = '#423126'; //nice brown color :)
+		if(i%keyLength==letterClicked%keyLength) //highlights all letters of same tile color as selected tile
+			ctx.fillStyle = '#FFFFFFAA'; //translucent white so tile color shows through
         ctx.fillText(letters[i],letterX[i],letterY[i]);
+		
+		//Outlines selected tile
+		ctx.strokeStyle = '#423126';
+		if(letterClicked==i)
+			ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).stroke();
     }
-    
+
+    ctx.fillStyle = '#423126';
     for(let i=0; i<punctX.length; i++){
         ctx.fillText(punctuation[i],punctX[i],punctY[i]);
     }
 }
 
 function clear(){
-    ctx.clearRect(0,0,c.width,c.height);
+    ctx.clearRect(0,0,c.width,c.height); //clears canvas
 }
 
 function createRandomKey(keyLength){
     let key = "";
     for(let i=0; i<keyLength; i++)
-        key+=chars.charAt(Math.floor((26*Math.random())));
+        key+=chars.charAt(Math.floor(1+(25*Math.random())));
     return key;
 }
 
 function createLetters(){
     let index;
-		for(let i=0; i<message.length; i++) {
-			index = chars.indexOf(message.charAt(i));
-			if (index>-1) { //checking if it is a letter
-				initLetters.push(message.charAt(i));
-				letters.push(message.charAt(i));
-			}else if(message.charAt(i)!=' '){
-				punctuation.push(message.charAt(i));
-			}	
-		}
-        //alert(letters);
-        //alert(punctuation);
+	for(let i=0; i<message.length; i++) {
+		index = chars.indexOf(message.charAt(i));
+		if (index>-1) { //checking if it is a letter
+			initLetters.push(message.charAt(i));
+			letters.push(message.charAt(i));
+		}else if(message.charAt(i)!=' '){
+			punctuation.push(message.charAt(i));
+		}	
+	}
 }
 
 function encrypt(key){
@@ -101,11 +133,12 @@ function encrypt(key){
         index = chars.indexOf(letters[i])
         letters[i] = chars.charAt((index+chars.indexOf(key.charAt(i%key.length)))%chars.length);
     }
-    //alert(letters);
 }
 
-function wrapLines(message, length){
-    let lastValidSpace = 0;
+function wrapLines(message, length){ //just a simple, clean text wrapper that takes a message and wrap length and returns an array of lines
+    let lines = [];
+
+	let lastValidSpace = 0;
     let nextSpace = 0;
     let startLine = 0;
     
@@ -125,6 +158,7 @@ function wrapLines(message, length){
         }
     }
     lines.push(message.substring(startLine, message.length));
+	return lines;
 }
 
 function createCharacterCoordinates(){
@@ -182,8 +216,8 @@ c.addEventListener('mousedown', e => {
     repaint();
 });
 
-function getQuotes(){
-    loadSourceText();
+function getQuotes(){ //this is messy due to shift from text file to API call... it'll soon change again for database query
+    /*loadSourceText();
     let end = 10; //avoids "quotes" near beginning of json
     let start;
 		do {
@@ -192,9 +226,32 @@ function getQuotes(){
 			if(start!=-1) {
 				quotes.push(sourceText.substring(start+8,end-3));
 			}
-		}while(start!=-1);
+		}while(start!=-1);*/
+		let quotes = [];
+		let Http = new XMLHttpRequest();
+		const url='https://goquotes-api.herokuapp.com/api/v1/all/quotes';
+		Http.open("GET",url,false);
+		Http.onreadystatechange = (e) => {
+	
+			var rawQuotes = [];
+			const rawText = Http.responseText;
+			const general = rawText.match(/status.+\"general\"/g)[0]; //keeps general quotes only
+			rawQuotes = general.match(/\"text\":.+?\"author\":/g);
+			for(let i=0; i<rawQuotes.length; i++){
+				let candidate = rawQuotes[i].substring(8,rawQuotes[i].length-11);
+				if(!(/\d/g).test(candidate)){ //no digits
+					if(candidate.match(/[A-Za-z]/g).length<80){ //no more than 80 letters
+						quotes.push(candidate);
+					}
+				}
+			}
+			//console.log("How many? " + quotes.length);
+		}
+		Http.send();
+		return quotes;
 }
 
+//gross original source text (not currently being used)
 function loadSourceText(){
     sourceText = ("{\n"
 				+ "	\"quotes\": [\n"
