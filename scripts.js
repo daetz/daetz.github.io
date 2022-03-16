@@ -12,34 +12,97 @@ CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
     return this;
 }
 
-let mx = 0; //mouse x
-let my = 0; //mouse y
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//////GLOBAL STUFF
+
+//canvas and graphics setup
+const c = document.getElementById("myCanvas");
+const ctx = c.getContext("2d");
+const hexColors = ["#b2a69e","#c7a379","#bebefa","#c6c97b","#dec8af","#a7b39b","#a69eb2","#eba893"];
+
+//text formatting
 const fontSize = 30;
 const kerning = fontSize*5/4;
 const linespace = kerning;
-const c = document.getElementById("myCanvas");
-const ctx = c.getContext("2d");
-
-var sourceText;
-const quotes = getQuotes();
-var message = quotes[Math.floor(quotes.length*Math.random())].toUpperCase();
-const keyLength = 8;
 const wrapLength = 21; //incomprehensibilities is the longest common english word
+
+//basic game info
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const VIGENERE = 0, MIXED_ALPHABET = 1;
+var queueGameMode = VIGENERE; //want to select gamemode for next reset w/o changing game...
+var gameMode = VIGENERE;
+var message;
+var messageData = [];
+var lines = [], initLetters = [], letters = [], punctuation = [];
+var letterX = [], letterY = [], punctX = [], punctY = [];
+var letterClicked = -1;
+var mx = 0; //mouse x
+var my = 0; //mouse y
+
+//load quotes
+const quotes = getQuotes();
+
+//////VIGENERE STUFF
+
+const keyLength = 8;
 var key;
 
-var lines = [], initLetters = [], letters = [], punctuation = [];
-const letterX = [], letterY = [], punctX = [], punctY = [];
-const hexColors = ["#b2a69e","#c7a379","#bebefa","#c6c97b","#dec8af","#a7b39b","#a69eb2","#eba893"];
-var letterClicked = -1;
+//////MIXED ALPHABET STUFF
 
-key=createRandomKey(keyLength);
-createLetters();
-encrypt(key);
-lines = wrapLines(message,wrapLength);
-createCharacterCoordinates();
-const messageData = getMessageData();
+var mixed;
+var unmixed;
+
+//////GAME LOOP
+
+prepareMessage(gameMode);
+console.log(chars); 
+console.log(mixed);
+console.log(message);
+console.log(letters);
 repaint();
+
+function reset(){
+	lines = [];
+	initLetters = [];
+	letters = [];
+	punctuation = [];
+	letterX = [];
+	letterY = [];
+	punctX = [];
+	punctY = [];
+	if(queueGameMode!=gameMode)
+		gameMode=queueGameMode;
+	prepareMessage(gameMode);
+	repaint();
+}
+
+function setGameMode(mode){
+	console.log("clicked!");
+	queueGameMode = mode;
+}
+function prepareMessage(gameMode){
+	message = quotes[Math.floor(quotes.length*Math.random())].toUpperCase();
+	createLetters();
+
+	switch (gameMode){
+		case VIGENERE:
+			key=createRandomKey(keyLength);
+			encryptVigenere(key);
+		break;
+		
+		case MIXED_ALPHABET:
+			createMixedAlphabet();
+			encryptMixedAlphabet(mixed);
+			unmixed = mixed; //user will change this as the game is played
+		break;
+		
+		default:
+		break;
+	}
+
+	lines = wrapLines(message,wrapLength);
+	createCharacterCoordinates();
+	messageData = getMessageData();
+}
 
 function getMessageData(){
 	let messageData = [];
@@ -76,31 +139,69 @@ function getMessageData(){
 function repaint(){
     let size = 20;
     clear();
-    for(let i=0; i<letterX.length; i++){
+	switch (gameMode){
+		case VIGENERE:
+			for(let i=0; i<letterX.length; i++){
 
-		//Draws tiles
-        ctx.fillStyle = hexColors[i%keyLength];
-        ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).fill();
-       
-		//Draws letters
-        ctx.font = `${fontSize}px monospace`;
-        ctx.textAlign = "center"; //these two lines mean that the same tile coordinates can be used...
-        ctx.textBaseline = "middle"; //...because the letters will be centered at (x,y)
-        ctx.fillStyle = '#423126'; //nice brown color :)
-		if(i%keyLength==letterClicked%keyLength) //highlights all letters of same tile color as selected tile
-			ctx.fillStyle = '#FFFFFFAA'; //translucent white so tile color shows through
-        ctx.fillText(letters[i],letterX[i],letterY[i]);
+				//Draws tiles
+				ctx.fillStyle = hexColors[i%keyLength];
+				ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).fill();
+			   
+				//Draws letters
+				ctx.font = `${fontSize}px monospace`;
+				ctx.textAlign = "center"; //these two lines mean that the same tile coordinates can be used...
+				ctx.textBaseline = "middle"; //...because the letters will be centered at (x,y)
+				ctx.fillStyle = '#423126'; //nice brown color :)
+				if(i%keyLength==letterClicked%keyLength) //highlights all letters of same tile color as selected tile
+					ctx.fillStyle = '#FFFFFFAA'; //translucent white so tile color shows through
+				ctx.fillText(letters[i],letterX[i],letterY[i]);
+				
+				//Outlines selected tile
+				ctx.strokeStyle = '#423126';
+				if(letterClicked==i)
+					ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).stroke();
+			}
 		
-		//Outlines selected tile
-		ctx.strokeStyle = '#423126';
-		if(letterClicked==i)
-			ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).stroke();
-    }
+			ctx.fillStyle = '#423126';
+			for(let i=0; i<punctX.length; i++){
+				ctx.fillText(punctuation[i],punctX[i],punctY[i]);
+			}
+		break;
 
-    ctx.fillStyle = '#423126';
-    for(let i=0; i<punctX.length; i++){
-        ctx.fillText(punctuation[i],punctX[i],punctY[i]);
-    }
+		case MIXED_ALPHABET:
+			for(let i=0; i<letterX.length; i++){
+
+				//Draws tiles
+				//ctx.fillStyle = '#a6a6a6';
+				//ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).fill();
+			   
+				//Draws letters
+				ctx.font = `${fontSize}px monospace`;
+				ctx.textAlign = "center"; //these two lines mean that the same tile coordinates can be used...
+				ctx.textBaseline = "middle"; //...because the letters will be centered at (x,y)
+				
+				let index = chars.indexOf(initLetters[i]);
+				if(mixed.charAt(index)==unmixed.charAt(index)) //mapping for that letter has not been changed
+					ctx.fillStyle = '#808080';
+				else
+					ctx.fillStyle = '#423126'; //nice brown color :)
+				//if(letters[i]==letters[letterClicked]) //highlights all letters of same letter as selected
+					//ctx.fillStyle = '#FFFFFFAA'; //translucent white so tile color shows through
+				ctx.fillText(letters[i],letterX[i],letterY[i]);
+				
+				ctx.strokeStyle = '#423126';
+				if(initLetters[i]==initLetters[letterClicked]) //compare init to avoid duplication issues
+					ctx.roundRect(letterX[i]-fontSize/2,letterY[i]-fontSize/2,fontSize,fontSize,fontSize/4).stroke();
+			}
+		
+			ctx.fillStyle = '#423126';
+			for(let i=0; i<punctX.length; i++){
+				ctx.fillText(punctuation[i],punctX[i],punctY[i]);
+			}
+		break;
+		default:
+		break;
+	}
 }
 
 function clear(){
@@ -110,8 +211,33 @@ function clear(){
 function createRandomKey(keyLength){
     let key = "";
     for(let i=0; i<keyLength; i++)
-        key+=chars.charAt(Math.floor(1+(25*Math.random())));
+        key+=chars.charAt(Math.floor(1+((chars.length-1)*Math.random())));
     return key;
+}
+
+//creates a unique mapping for each letter in the alphabet (no letter maps to itself!)
+function createMixedAlphabet(){
+	mixed = ""; //clear mixed alphabet string
+	let temp = chars; //we're going to be deleting characters one at a time
+
+	/*This loop does most of the work. For all but the last two letters in the alphabet "chars",
+	the loop temporarily omits the letter to be mapped from "temp" so it doesn't get mapped to itself,
+	then chooses a random letter from what's left. Note that temp is not actually altered during this step.
+	Then, the last letter mapped IS removed from temp so that two letters don't map to the same letter.*/
+	for(let i=0; i<chars.length-2; i++){
+		mixed += temp.replace(chars.charAt(i),"").charAt(Math.floor((temp.length-1)*Math.random()));
+		temp = temp.replace(mixed.charAt(mixed.length-1),"");
+	}
+	/*It's important to examine the last TWO letters, because if we didn't, there's a small chance
+	that the last letter would have to map to itself (imagine rotating A-Y, but leaving Z out).
+	If the last letter of chars is also the last letter of temp, then to guarantee a unique mapping
+	we switch the last two letters.*/
+	if(chars.charAt(chars.length-1)==temp.charAt(1)){
+		mixed+=temp.charAt(1) + temp.charAt(0);
+	}else{
+		mixed += temp.replace(chars.charAt(chars.length-2),"").charAt(Math.floor((temp.length-1)*Math.random()));
+		mixed += temp.replace(mixed.charAt(mixed.length-1),"");
+	}
 }
 
 function createLetters(){
@@ -127,12 +253,18 @@ function createLetters(){
 	}
 }
 
-function encrypt(key){
+function encryptVigenere(key){
     let index;
     for(let i=0; i<letters.length; i++){
         index = chars.indexOf(letters[i])
         letters[i] = chars.charAt((index+chars.indexOf(key.charAt(i%key.length)))%chars.length);
     }
+}
+
+function encryptMixedAlphabet(mixed){
+	for(let i=0; i<letters.length; i++){
+		letters[i] = mixed.charAt(chars.indexOf(initLetters[i]));
+	}
 }
 
 function wrapLines(message, length){ //just a simple, clean text wrapper that takes a message and wrap length and returns an array of lines
@@ -195,16 +327,61 @@ function shiftLetter(index,newLetter){
 				shiftKey+='A';
 		}
 		//System.out.println(shiftKey);
-		encrypt(shiftKey);
+		encryptVigenere(shiftKey);
 		letterClicked = -1;
+}
+
+//creates new mapping for letter 
+function mapLetter(letter,keyDown){
+	console.log(unmixed);
+	let index = chars.indexOf(initLetters[letter]); //place in the original mixed alphabet where the clicked letter is found
+	
+	//need to check to see if the letter entered has already been tried for a different letter
+	//this would mean unmixed already contains the letter in a place where mixed does not
+	let regexpKeyDown = new RegExp(keyDown,'g');
+	console.log(unmixed.match(regexpKeyDown));
+	if(unmixed.match(regexpKeyDown) != null){
+		let index2 = unmixed.indexOf(keyDown); //first or only occurrence
+		if(unmixed.charAt(index2)!=mixed.charAt(index2)){
+			unmixed = unmixed.substring(0,index2) + mixed.charAt(index2) + unmixed.substring(index2+1,unmixed.length);
+		}else{
+			index2 = unmixed.lastIndexOf(keyDown); //last occurrence if applicable
+			if(unmixed.charAt(index2)!=mixed.charAt(index2)){
+				unmixed = unmixed.substring(0,index2) + mixed.charAt(index2) + unmixed.substring(index2+1,unmixed.length);
+			}
+		}
+	}
+	unmixed = unmixed.substring(0,index) + keyDown + unmixed.substring(index+1,unmixed.length);
+	encryptMixedAlphabet(unmixed);
+	console.log(unmixed);
+}
+
+function checkWin(){
+	for(let i=0; i<letters.length; i++)
+		if(letters[i]!=initLetters[i])
+			return false;
+	return true;
 }
 
 c.addEventListener('keydown', e => {
     if(letterClicked>-1){ //change this to mode==TYPING
         let keyDown = e.key.toUpperCase();
         if(chars.indexOf(keyDown)>-1){
-            shiftLetter(letterClicked,keyDown);
+			switch(gameMode){
+				case VIGENERE:
+					shiftLetter(letterClicked,keyDown);
+				break;
+
+				case MIXED_ALPHABET:
+					mapLetter(letterClicked,keyDown);
+				break;
+			}
             repaint();
+			if(checkWin()){
+				setTimeout(function() {
+					alert("Congratulations!");
+				},10)
+			}
         }
     }
 });
@@ -251,7 +428,7 @@ function getQuotes(){ //this is messy due to shift from text file to API call...
 		return quotes;
 }
 
-//gross original source text (not currently being used)
+/*gross original source text (not currently being used)
 function loadSourceText(){
     sourceText = ("{\n"
 				+ "	\"quotes\": [\n"
@@ -462,4 +639,4 @@ function loadSourceText(){
 				+ "       \"quote\":\"If you can dream it, you can achieve it.\",\"author\":\"Zig Ziglar\"}\n"
 				+ "]\n"
 				+ "}");
-}
+}*/

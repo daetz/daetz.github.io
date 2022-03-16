@@ -6,9 +6,24 @@
         </title>
         <link rel="stylesheet" href="styles.css"></link>
     </head>
+   
     <body>
         <h1>Codebreaker</h1>
         <p>by Andrew Daetz</p>
+
+        <button type="button" class="restart_button" onclick="reset()">New Quote</button>
+
+        <nav>
+            <div class="dropdown">
+                <div class="gameModes">
+                    <button>Game Mode</button>
+                    <ul>
+                        <li onclick="setGameMode(0)">Vigenère</li>
+                        <li onclick="setGameMode(1)">Mixed Alphabet</li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
         <!--tabindex='1' makes canvas focusable so keydown works-->
         <canvas id="myCanvas" class="canvas" width="800" height ="400" tabindex='1'></canvas>
         <script type="text/javascript" src="scripts.js"></script>

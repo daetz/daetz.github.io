@@ -14,4 +14,84 @@ p{
 .canvas{
     border: 1px solid black;
     background-color: rgb(194, 250, 250);
+    top: 20px;
+    position: relative;
+}
+.restart_button{
+    font-family: monospace;
+    background-color: rgb(194, 250, 250);
+    border-radius: 10px;
+    top: 0;
+    left: 0;
+    position: absolute;
+}
+.dropdown{
+    font-family: monospace;
+    top:20px;
+    left:0;
+    position: absolute;
+    /*height: 10vh;*/
+    display: flex;
+    /*justify-content: space-around;
+    align-items: center;*/
+    /*width: 60%; /*60% of screen width*/
+    /*margin: left; /*centers on screen*/
+}
+
+.dropdown button{
+    font-family: monospace;
+    background-color: rgb(194, 250, 250);
+    border-radius: 10px;
+    /*top:20;
+    left: 0;
+    position: absolute;*/
+}
+.gameModes{
+    position: relative;
+    align-items: center;
+    border-radius: 10px;
+}
+.gameModes ul{
+    position: absolute;
+    background: white;
+    margin-top: 0px;
+    width: 150px;
+    height: 50px;
+    display: flex; /*accomodates multiple list items*/
+    /*justify-content: space-around;*/
+    align-items: center;
+    flex-direction: column;
+    list-style: none; /*eliminates bullet*/
+    padding: 0; /*eliminates annoying space on left side of list*/
+    border-radius: 10px;
+    text-decoration: none;
+    opacity:0;
+    pointer-events: none; /*should be none so can't be clicked unless list shown, but 
+    right now if I put "none" I can't click it at all... ??*/
+    transform: translateY(0px);
+    transition: all 0.4s ease;
+}
+.gameModes li{
+    
+    /*fills whole ul instead of just text area*/
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.gameModes li:hover{
+    background:rgb(177, 204, 204);
+    border-radius: 10px;
+    pointer-events: all;
+}
+.gameModes a{
+    color: black;
+
+}
+
+.gameModes button:focus + ul{
+    opacity: 1;
+    pointer-events: all;
 }
